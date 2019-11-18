@@ -1,17 +1,45 @@
-name: Test Rust project
+name: Build Rust project
 on: [pull_request]
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
+  build-windows:
+    runs-on: windows-latest
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, macOS-latest]
         rust: [1.36.0, stable, nightly]
-
     steps:
+    - uses: actions/checkout@master
     - uses: hecrj/setup-rust-action@v1
       with:
         rust-version: ${{ matrix.rust }}
+    - name: Run build
+      run: cargo build
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [1.36.0, stable, nightly]
+    steps:
     - uses: actions/checkout@master
+    - uses: hecrj/setup-rust-action@v1
+      with:
+        rust-version: ${{ matrix.rust }}
+    - name: Run build
+      run: cargo build
+
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [1.36.0, stable, nightly]
+    steps:
+    - uses: actions/checkout@master
+    - uses: hecrj/setup-rust-action@v1
+      with:
+        rust-version: ${{ matrix.rust }}
+    - name: Install libudev
+      run: apt-get update && apt-get install -y libudev-dev
     - name: Run build
       run: cargo build
