@@ -1,5 +1,9 @@
+[![Actions Status](https://github.com/timfish/usb-enumeration/workflows/{workflow_name}/badge.svg)](https://github.com/timfish/usb-enumeration/actions)
+
 A cross platform Rust library that returns the vendor and product IDs of
 currently connected USB devices
+
+Requires Rust >= 1.36.0
 
 ```rust
 let devices = usb_enumeration::enumerate();

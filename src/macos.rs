@@ -3,7 +3,7 @@ use core_foundation::{base::*, dictionary::*, number::*, string::*};
 use failure::Error;
 use io_kit_sys::{types::*, usb::lib::*, *};
 use mach::kern_return::*;
-use std::mem;
+use std::mem::MaybeUninit;
 
 pub fn _enumerate() -> Vec<USBDevice> {
     let mut output = Vec::new();
@@ -14,7 +14,7 @@ pub fn _enumerate() -> Vec<USBDevice> {
             panic!("Failed to get IOServiceMatching");
         }
 
-        let mut iter: io_iterator_t = mem::uninitialized();
+        let mut iter: io_iterator_t = MaybeUninit::uninit().assume_init();
 
         let kr = IOServiceGetMatchingServices(kIOMasterPortDefault, matching_dict, &mut iter);
         if kr != KERN_SUCCESS {
@@ -22,10 +22,10 @@ pub fn _enumerate() -> Vec<USBDevice> {
         }
 
         #[allow(unused_assignments)]
-        let mut device: io_service_t = mem::uninitialized();
+        let mut device: io_service_t = MaybeUninit::uninit().assume_init();
 
         while (device = IOIteratorNext(iter)) == () && device > 0 {
-            let mut props: CFMutableDictionaryRef = mem::uninitialized();
+            let mut props: CFMutableDictionaryRef = MaybeUninit::uninit().assume_init();
 
             let _result =
                 IORegistryEntryCreateCFProperties(device, &mut props, kCFAllocatorDefault, 0);

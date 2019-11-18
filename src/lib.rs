@@ -4,7 +4,7 @@
 //! # Example
 //! ```
 //! let devices = usb_enumeration::enumerate();
-//! 
+//!
 //! println!("{:#?}", devices);
 //!
 //! // Outputs:
@@ -20,6 +20,8 @@
 //! //     etc...
 //! // ]
 //! ```
+
+#![cfg_attr(feature = "strict", deny(warnings))]
 
 #[macro_use]
 extern crate failure;
@@ -43,7 +45,7 @@ mod linux;
 use crate::linux::*;
 
 /// Enumerates connected USB devices
-/// 
+///
 /// ```
 /// let devices = usb_enumeration::enumerate();
 /// ```
