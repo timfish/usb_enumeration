@@ -6,7 +6,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, macOS-latest]
-        rust: [1.36, stable, nightly]
+        rust: [1.36.0, stable, nightly]
 
     steps:
     - uses: hecrj/setup-rust-action@v1
