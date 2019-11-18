@@ -3,7 +3,7 @@ use core_foundation::{base::*, dictionary::*, number::*, string::*};
 use failure::Error;
 use io_kit_sys::{types::*, usb::lib::*, *};
 use mach::kern_return::*;
-use std::mem;
+use std::mem::MaybeUninit;
 
 pub fn _enumerate() -> Vec<USBDevice> {
     let mut output = Vec::new();
