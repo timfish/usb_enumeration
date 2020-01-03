@@ -14,17 +14,14 @@
 //! //         pid: 1957,
 //! //     },
 //! //     USBDevice {
-//! //         vid: 1118,
-//! //         pid: 1957,
+//! //         vid: 4898,
+//! //         pid: 1002,
 //! //     },
 //! //     etc...
 //! // ]
 //! ```
 
 #![cfg_attr(feature = "strict", deny(warnings))]
-
-#[macro_use]
-extern crate failure;
 
 mod common;
 pub use common::USBDevice;

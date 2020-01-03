@@ -1,7 +1,7 @@
 use crate::common::*;
 
-use failure::Error;
 use std::{
+    error::Error,
     ffi::OsStr,
     iter::once,
     mem::size_of,
@@ -54,7 +54,7 @@ pub fn _enumerate() -> Vec<USBDevice> {
     output
 }
 
-fn extract_vid_pid(buf: Vec<u8>) -> Result<(u16, u16), Error> {
+fn extract_vid_pid(buf: Vec<u8>) -> Result<(u16, u16), Box<dyn Error + Send + Sync>> {
     // Convert to u16 so we can convert from utf16
     let str_vec: Vec<u16> = buf
         .chunks_exact(2)

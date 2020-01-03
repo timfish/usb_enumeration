@@ -1,6 +1,6 @@
 use crate::common::*;
-use failure::Error;
 
+use std::error::Error;
 use udev::{Context, Device, Enumerator};
 
 pub fn _enumerate() -> Vec<USBDevice> {
@@ -18,7 +18,7 @@ pub fn _enumerate() -> Vec<USBDevice> {
     output
 }
 
-fn get_vid_pid(device: Device) -> Result<(u16, u16), Error> {
+fn get_vid_pid(device: Device) -> Result<(u16, u16), Box<dyn Error + Send + Sync>> {
     let vid = device.property_value("ID_VENDOR_ID").ok_or(ParseError)?;
     let pid = device.property_value("ID_MODEL_ID").ok_or(ParseError)?;
 

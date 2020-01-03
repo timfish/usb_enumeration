@@ -1,9 +1,8 @@
 use crate::common::*;
 use core_foundation::{base::*, dictionary::*, number::*, string::*};
-use failure::Error;
 use io_kit_sys::{types::*, usb::lib::*, *};
 use mach::kern_return::*;
-use std::mem::MaybeUninit;
+use std::{error::Error, mem::MaybeUninit};
 
 pub fn _enumerate() -> Vec<USBDevice> {
     let mut output = Vec::new();
@@ -46,7 +45,9 @@ pub fn _enumerate() -> Vec<USBDevice> {
     output
 }
 
-fn get_vid_pid(properties: CFDictionary<CFString, CFType>) -> Result<(u16, u16), Error> {
+fn get_vid_pid(
+    properties: CFDictionary<CFString, CFType>,
+) -> Result<(u16, u16), Box<dyn Error + Send + Sync>> {
     let key = CFString::from_static_string("idVendor");
 
     let vid = properties

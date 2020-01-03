@@ -1,9 +1,9 @@
 [package]
 name = "usb-enumeration"
-version = "0.0.1"
+version = "0.0.2"
 description = "A cross platform library that returns the vendor and product IDs of currently connected USB devices"
 authors = ["Tim Fish <tim@timfish.uk>"]
-repository = "https://github.com/timfish/usb-enumeration-rs"
+repository = "https://github.com/timfish/usb-enumeration"
 license = "MIT"
 edition = "2018"
 
@@ -15,7 +15,7 @@ crate-type = ["lib"]
 strict = []
 
 [dependencies]
-failure = "0.1"
+thiserror = "^1.0.9"
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["setupapi", "impl-debug", "impl-default"] }
 [target.'cfg(target_os = "linux")'.dependencies]
