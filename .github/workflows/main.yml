@@ -1,52 +1,26 @@
 name: Build
 on:
   push:
-    branches:
-      - master
   pull_request:
-    types: [opened, synchronize, reopened]
   schedule:
     - cron: '0 0 * * *'
-jobs:
-  build-windows:
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [1.36.0, stable, nightly]
-    steps:
-      - uses: actions/checkout@master
-      - uses: hecrj/setup-rust-action@v1
-        with:
-          rust-version: ${{ matrix.rust }}
-      - name: Run build
-        run: cargo build --features strict
-  build-macos:
-    runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [1.36.0, stable, nightly]
-    steps:
-      - uses: actions/checkout@master
-      - uses: hecrj/setup-rust-action@v1
-        with:
-          rust-version: ${{ matrix.rust }}
-      - name: Run build
-        run: cargo build --features strict
 
-  build-linux:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [1.36.0, stable, nightly]
-    steps:
-      - uses: actions/checkout@master
-      - uses: hecrj/setup-rust-action@v1
-        with:
-          rust-version: ${{ matrix.rust }}
-      - name: Install libudev
-        run: sudo apt-get update && sudo apt-get install -y libudev-dev
-      - name: Run build
-        run: cargo build --features strict
+runs-on: ${{ matrix.os }}
+strategy:
+  matrix:
+    os: [windows-latest, macos-latest, ubuntu-latest]
+    rust: [1.36.0, stable, beta, nightly]
+  fail-fast: false
+
+steps:
+  - uses: actions/checkout@v2
+  - uses: actions-rs/toolchain@v1
+    with:
+      toolchain: ${{ matrix.rust }}
+  - name: Install libudev
+    if: matrix.os == 'ubuntu-latest'
+    run: sudo apt-get update && sudo apt-get install -y libudev-dev
+  - uses: actions-rs/cargo@v1
+    with:
+      command: build
+      args: --features strict
