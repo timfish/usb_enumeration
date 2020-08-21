@@ -1,10 +1,11 @@
 [package]
 name = "usb_enumeration"
-version = "0.0.2"
+version = "0.0.3"
 description = "A cross platform library that returns the vendor and product IDs of currently connected USB devices"
 authors = ["Tim Fish <tim@timfish.uk>"]
 repository = "https://github.com/timfish/usb_enumeration"
 license = "MIT"
+readme = "README.md"
 edition = "2018"
 
 [lib]
