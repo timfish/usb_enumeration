@@ -1,41 +1,70 @@
 use crate::common::*;
 
 use std::error::Error;
-use udev::{Context, Device, Enumerator};
+use udev::Enumerator;
 
-pub fn _enumerate() -> Vec<USBDevice> {
+pub fn enumerate_platform() -> Vec<USBDevice> {
     let mut output = Vec::new();
 
-    let context = Context::new().expect("could not get udev context");
-    let mut enumerator = Enumerator::new(&context).expect("could not get udev enumerator");
+    let mut enumerator = Enumerator::new().expect("could not get udev enumerator");
 
     for device in enumerator.scan_devices().expect("could not scan devices") {
-        if let Ok((vid, pid)) = get_vid_pid(device) {
-            output.push(USBDevice { vid, pid });
-        }
+        let _ = || -> Result<(), Box<dyn Error>> {
+            let id = device
+                .property_value("DEVPATH")
+                .ok_or(ParseError)?
+                .to_str()
+                .ok_or(ParseError)?
+                .to_string();
+
+            let vendor_id = get_pid_or_vid(
+                device
+                    .property_value("ID_VENDOR_ID")
+                    .ok_or(ParseError)?
+                    .to_str()
+                    .ok_or(ParseError)?,
+            )?;
+
+            let product_id = get_pid_or_vid(
+                device
+                    .property_value("ID_MODEL_ID")
+                    .ok_or(ParseError)?
+                    .to_str()
+                    .ok_or(ParseError)?,
+            )?;
+
+            let mut description = device
+                .property_value("ID_MODEL_FROM_DATABASE")
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_string());
+
+            if description.is_none() {
+                description = device
+                    .property_value("ID_MODEL")
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.to_string());
+            }
+
+            output.push(USBDevice {
+                id,
+                vendor_id,
+                product_id,
+                description,
+            });
+
+            Ok(())
+        }();
     }
 
     output
 }
 
-fn get_vid_pid(device: Device) -> Result<(u16, u16), Box<dyn Error + Send + Sync>> {
-    let vid = device.property_value("ID_VENDOR_ID").ok_or(ParseError)?;
-    let pid = device.property_value("ID_MODEL_ID").ok_or(ParseError)?;
-
-    let mut vid = vid.to_str().ok_or(ParseError)?;
-    let mut pid = pid.to_str().ok_or(ParseError)?;
-
+fn get_pid_or_vid(id: &str) -> Result<u16, Box<dyn Error>> {
+    let mut id = id;
     // Sometimes they are prefixed
-    if vid.starts_with("0x") {
-        vid = &vid[2..];
+    if id.starts_with("0x") {
+        id = &id[2..];
     }
 
-    if pid.starts_with("0x") {
-        pid = &pid[2..];
-    }
-
-    return Ok((
-        u16::from_str_radix(&vid, 16)?,
-        u16::from_str_radix(&pid, 16)?,
-    ));
+    Ok(u16::from_str_radix(&id, 16)?)
 }

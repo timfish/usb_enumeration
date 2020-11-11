@@ -1,27 +1,28 @@
 [package]
-name = "usb_enumeration"
-version = "0.0.3"
-description = "A cross platform library that returns the vendor and product IDs of currently connected USB devices"
 authors = ["Tim Fish <tim@timfish.uk>"]
-repository = "https://github.com/timfish/usb_enumeration"
-license = "MIT"
-readme = "README.md"
+description = "A cross platform library that returns details of currently connected USB devices"
 edition = "2018"
+license = "MIT"
+name = "usb_enumeration"
+readme = "README.md"
+repository = "https://github.com/timfish/usb_enumeration"
+version = "0.1.0"
 
 [lib]
 crate-type = ["lib"]
+path = "src/lib.rs"
 
 [features]
 # Used to fail build on warnings
 strict = []
 
 [dependencies]
-thiserror = "^1.0.9"
+crossbeam = "0.8"
 [target.'cfg(target_os = "windows")'.dependencies]
-winapi = { version = "0.3", features = ["setupapi", "impl-debug", "impl-default"] }
+winapi = {version = "0.3", features = ["setupapi", "impl-default"]}
 [target.'cfg(target_os = "linux")'.dependencies]
-udev = "0.2.0"
+udev = "0.5"
 [target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.6"
 io-kit-sys = "0.1.0"
 mach = "0.3.2"
-core-foundation = "0.6"
