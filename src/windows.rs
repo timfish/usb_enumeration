@@ -1,69 +1,98 @@
 use crate::common::*;
-
 use std::{
     error::Error,
     ffi::OsStr,
-    iter::once,
     mem::size_of,
     os::windows::ffi::OsStrExt,
     ptr::{null, null_mut},
 };
-use winapi::{shared::guiddef::GUID, um::setupapi::*};
+use winapi::um::setupapi::*;
 
-pub fn _enumerate() -> Vec<USBDevice> {
+pub fn enumerate_platform() -> Vec<USBDevice> {
     let mut output: Vec<USBDevice> = Vec::new();
 
-    let flags = DIGCF_ALLCLASSES | DIGCF_PRESENT;
-    let wide: Vec<u16> = OsStr::new("USB").encode_wide().chain(once(0)).collect();
+    let usb: Vec<u16> = OsStr::new("USB\0").encode_wide().collect();
+    let dev_info = unsafe {
+        SetupDiGetClassDevsW(
+            null(),
+            usb.as_ptr(),
+            null_mut(),
+            DIGCF_ALLCLASSES | DIGCF_PRESENT,
+        )
+    };
 
-    let dev_info = unsafe { SetupDiGetClassDevsW(null(), wide.as_ptr(), null_mut(), flags) };
-
-    let mut dev_info_data: Vec<SP_DEVINFO_DATA> = vec![SP_DEVINFO_DATA {
+    let mut dev_info_data = SP_DEVINFO_DATA {
         cbSize: size_of::<SP_DEVINFO_DATA>() as u32,
-        ClassGuid: GUID::default(),
-        DevInst: 0,
-        Reserved: 0,
-    }];
+        ..Default::default()
+    };
 
     let mut i = 0;
-    while unsafe { SetupDiEnumDeviceInfo(dev_info, i, dev_info_data.as_mut_ptr()) } > 0 {
-        let mut n_size: Vec<u32> = vec![0];
-        let mut data_t: Vec<u32> = vec![0];
+    while unsafe { SetupDiEnumDeviceInfo(dev_info, i, &mut dev_info_data) } > 0 {
         let mut buf: Vec<u8> = vec![0; 1000];
 
         if unsafe {
             SetupDiGetDeviceRegistryPropertyW(
                 dev_info,
-                dev_info_data.as_mut_ptr(),
+                &mut dev_info_data,
                 SPDRP_HARDWAREID,
-                data_t.as_mut_ptr(),
+                null_mut(),
                 buf.as_mut_ptr(),
                 buf.len() as u32,
-                n_size.as_mut_ptr(),
+                null_mut(),
             )
         } > 0
         {
-            if let Ok((vid, pid)) = extract_vid_pid(buf) {
-                output.push(USBDevice { vid, pid });
+            if let Ok((vendor_id, product_id)) = extract_vid_pid(buf) {
+                buf = vec![0; 1000];
+
+                if unsafe {
+                    SetupDiGetDeviceRegistryPropertyW(
+                        dev_info,
+                        &mut dev_info_data,
+                        SPDRP_DEVICEDESC,
+                        null_mut(),
+                        buf.as_mut_ptr(),
+                        buf.len() as u32,
+                        null_mut(),
+                    )
+                } > 0
+                {
+                    let description = string_from_buf_u8(buf);
+
+                    let mut buf: Vec<u16> = vec![0; 1000];
+
+                    if unsafe {
+                        SetupDiGetDeviceInstanceIdW(
+                            dev_info,
+                            &mut dev_info_data,
+                            buf.as_mut_ptr(),
+                            buf.len() as u32,
+                            null_mut(),
+                        )
+                    } > 0
+                    {
+                        let id = string_from_buf_u16(buf);
+                        output.push(USBDevice {
+                            id,
+                            vendor_id,
+                            product_id,
+                            description: Some(description),
+                        });
+                    }
+                }
             }
         }
 
         i += 1;
     }
 
+    unsafe { SetupDiDestroyDeviceInfoList(dev_info) };
+
     output
 }
 
 fn extract_vid_pid(buf: Vec<u8>) -> Result<(u16, u16), Box<dyn Error + Send + Sync>> {
-    // Convert to u16 so we can convert from utf16
-    let str_vec: Vec<u16> = buf
-        .chunks_exact(2)
-        .into_iter()
-        .map(|a| u16::from_ne_bytes([a[0], a[1]]))
-        .collect();
-
-    let id = String::from_utf16(&str_vec)?.to_uppercase();
-    let id = id.trim_matches(char::from(0));
+    let id = string_from_buf_u8(buf).to_uppercase();
 
     let vid = id.find("VID_").ok_or(ParseError)?;
     let pid = id.find("PID_").ok_or(ParseError)?;
@@ -72,4 +101,24 @@ fn extract_vid_pid(buf: Vec<u8>) -> Result<(u16, u16), Box<dyn Error + Send + Sy
         u16::from_str_radix(&id[vid + 4..vid + 8], 16)?,
         u16::from_str_radix(&id[pid + 4..pid + 8], 16)?,
     ))
+}
+
+fn string_from_buf_u16(buf: Vec<u16>) -> String {
+    let mut out = String::from_utf16_lossy(&buf);
+
+    if let Some(i) = out.find('\u{0}') {
+        out.truncate(i);
+    }
+
+    out
+}
+
+fn string_from_buf_u8(buf: Vec<u8>) -> String {
+    let str_vec: Vec<u16> = buf
+        .chunks_exact(2)
+        .into_iter()
+        .map(|a| u16::from_ne_bytes([a[0], a[1]]))
+        .collect();
+
+    string_from_buf_u16(str_vec)
 }

@@ -4,16 +4,16 @@ use io_kit_sys::{types::*, usb::lib::*, *};
 use mach::kern_return::*;
 use std::{error::Error, mem::MaybeUninit};
 
-pub fn _enumerate() -> Vec<USBDevice> {
+pub fn enumerate_platform() -> Vec<USBDevice> {
     let mut output = Vec::new();
 
     unsafe {
         let matching_dict = IOServiceMatching(kIOUSBDeviceClassName);
-        if let None = matching_dict.as_ref() {
+        if matching_dict.as_ref().is_none() {
             panic!("Failed to get IOServiceMatching");
         }
 
-        let mut iter: io_iterator_t = MaybeUninit::uninit().assume_init();
+        let mut iter: io_iterator_t = 0;
 
         let kr = IOServiceGetMatchingServices(kIOMasterPortDefault, matching_dict, &mut iter);
         if kr != KERN_SUCCESS {
@@ -21,9 +21,11 @@ pub fn _enumerate() -> Vec<USBDevice> {
         }
 
         #[allow(unused_assignments)]
-        let mut device: io_service_t = MaybeUninit::uninit().assume_init();
+        let mut device: io_service_t = 0;
 
+        #[allow(clippy::unit_cmp)]
         while (device = IOIteratorNext(iter)) == () && device > 0 {
+            #[allow(clippy::uninit_assumed_init)]
             let mut props: CFMutableDictionaryRef = MaybeUninit::uninit().assume_init();
 
             let _result =
@@ -32,9 +34,46 @@ pub fn _enumerate() -> Vec<USBDevice> {
             let properties: CFDictionary<CFString, CFType> =
                 CFMutableDictionary::wrap_under_get_rule(props).to_immutable();
 
-            if let Ok((vid, pid)) = get_vid_pid(properties) {
-                output.push(USBDevice { vid, pid });
-            }
+            let _ = || -> Result<(), Box<dyn Error>> {
+                let key = CFString::from_static_string("sessionID");
+                let id = properties
+                    .find(&key)
+                    .and_then(|value_ref| value_ref.downcast::<CFNumber>())
+                    .ok_or(ParseError)?
+                    .to_i64()
+                    .ok_or(ParseError)?;
+
+                let key = CFString::from_static_string("idVendor");
+                let vendor_id = properties
+                    .find(&key)
+                    .and_then(|value_ref| value_ref.downcast::<CFNumber>())
+                    .ok_or(ParseError)?
+                    .to_i32()
+                    .ok_or(ParseError)? as u16;
+
+                let key = CFString::from_static_string("idProduct");
+                let product_id = properties
+                    .find(&key)
+                    .and_then(|value_ref| value_ref.downcast::<CFNumber>())
+                    .ok_or(ParseError)?
+                    .to_i32()
+                    .ok_or(ParseError)? as u16;
+
+                let key = CFString::from_static_string("USB Product Name");
+                let description = properties
+                    .find(&key)
+                    .and_then(|value_ref| value_ref.downcast::<CFString>())
+                    .map(|s| s.to_string());
+
+                output.push(USBDevice {
+                    id: id.to_string(),
+                    vendor_id,
+                    product_id,
+                    description,
+                });
+
+                Ok(())
+            }();
 
             IOObjectRelease(device);
         }
@@ -43,28 +82,4 @@ pub fn _enumerate() -> Vec<USBDevice> {
     }
 
     output
-}
-
-fn get_vid_pid(
-    properties: CFDictionary<CFString, CFType>,
-) -> Result<(u16, u16), Box<dyn Error + Send + Sync>> {
-    let key = CFString::from_static_string("idVendor");
-
-    let vid = properties
-        .find(&key)
-        .and_then(|value_ref| value_ref.downcast::<CFNumber>())
-        .ok_or(ParseError)?
-        .to_i32()
-        .ok_or(ParseError)? as u16;
-
-    let key = CFString::from_static_string("idProduct");
-
-    let pid = properties
-        .find(&key)
-        .and_then(|value_ref| value_ref.downcast::<CFNumber>())
-        .ok_or(ParseError)?
-        .to_i32()
-        .ok_or(ParseError)? as u16;
-
-    Ok((vid, pid))
 }
