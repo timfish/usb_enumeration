@@ -11,7 +11,7 @@
 //!
 //! // Outputs:
 //! // [
-//! //   USBDevice {
+//! //   UsbDevice {
 //! //       id: "USB\\VID_0CE9&PID_1220\\0000000004BE",
 //! //       vendor_id: 3305,
 //! //       product_id: 4640,
@@ -19,7 +19,7 @@
 //! //           "PicoScope 4000 series PC Oscilloscope",
 //! //       ),
 //! //   },
-//! //   USBDevice {
+//! //   UsbDevice {
 //! //       id: "USB\\VID_046D&PID_C52B\\5&17411534&0&11",
 //! //       vendor_id: 1133,
 //! //       product_id: 50475,
@@ -27,7 +27,7 @@
 //! //           "USB Composite Device",
 //! //       ),
 //! //   },
-//! //   USBDevice {
+//! //   UsbDevice {
 //! //       id: "USB\\VID_046D&PID_C52B&MI_00\\6&12D311A2&0&0000",
 //! //       vendor_id: 1133,
 //! //       product_id: 50475,
@@ -62,7 +62,7 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
 mod common;
-pub use common::USBDevice;
+pub use common::UsbDevice;
 use crossbeam::channel::{bounded, unbounded, Receiver, Sender};
 use std::{collections::HashSet, thread, time::Duration};
 
@@ -93,7 +93,7 @@ use crate::linux::*;
 /// ```no_run
 /// let devices = usb_enumeration::enumerate(Some(0x1234), None);
 /// ```
-pub fn enumerate(vendor_id: Option<u16>, product_id: Option<u16>) -> Vec<USBDevice> {
+pub fn enumerate(vendor_id: Option<u16>, product_id: Option<u16>) -> Vec<UsbDevice> {
     enumerate_platform(vendor_id, product_id)
 }
 
@@ -101,11 +101,11 @@ pub fn enumerate(vendor_id: Option<u16>, product_id: Option<u16>) -> Vec<USBDevi
 #[derive(Debug, Clone)]
 pub enum Event {
     /// Initial list of devices when polling starts
-    Initial(Vec<USBDevice>),
+    Initial(Vec<UsbDevice>),
     /// A device that has just been connected
-    Connect(USBDevice),
+    Connect(UsbDevice),
     /// A device that has just disconnected
-    Disconnect(USBDevice),
+    Disconnect(UsbDevice),
 }
 
 #[derive(Clone)]
@@ -173,24 +173,24 @@ impl Observer {
                         return;
                     }
 
-                    let mut device_list: HashSet<USBDevice> = device_list.into_iter().collect();
-                    let mut wait_seconds = this.poll_interval;
+                    let mut device_list: HashSet<UsbDevice> = device_list.into_iter().collect();
+                    let mut wait_seconds = this.poll_interval as f32;
 
                     loop {
-                        while wait_seconds > 0 {
+                        while wait_seconds > 0.0 {
                             // Check whether the subscription has been disposed
                             if let Err(crossbeam::channel::RecvTimeoutError::Disconnected) =
-                                rx_close.recv_timeout(Duration::from_secs(1))
+                                rx_close.recv_timeout(Duration::from_millis(250))
                             {
                                 return;
                             }
 
-                            wait_seconds -= 1;
+                            wait_seconds -= 0.25;
                         }
 
-                        wait_seconds = this.poll_interval;
+                        wait_seconds = this.poll_interval as f32;
 
-                        let next_devices: HashSet<USBDevice> =
+                        let next_devices: HashSet<UsbDevice> =
                             enumerate(this.vendor_id, this.product_id)
                                 .into_iter()
                                 .collect();

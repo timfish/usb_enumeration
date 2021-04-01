@@ -6,6 +6,7 @@ currently connected USB devices
 [![Actions Status](https://github.com/timfish/usb-enumeration/workflows/Build/badge.svg)](https://github.com/timfish/usb-enumeration/actions)
 
 ## Example
+
 ```rust
 let devices = usb_enumeration::enumerate(None, None);
 
@@ -13,7 +14,7 @@ println!("{:#?}", devices);
 
 // Outputs:
 // [
-//   USBDevice {
+//   UsbDevice {
 //       id: "USB\\VID_0CE9&PID_1220\\0000000004BE",
 //       vendor_id: 3305,
 //       product_id: 4640,
@@ -21,7 +22,7 @@ println!("{:#?}", devices);
 //           "PicoScope 4000 series PC Oscilloscope",
 //       ),
 //   },
-//   USBDevice {
+//   UsbDevice {
 //       id: "USB\\VID_046D&PID_C52B\\5&17411534&0&11",
 //       vendor_id: 1133,
 //       product_id: 50475,
@@ -29,7 +30,7 @@ println!("{:#?}", devices);
 //           "USB Composite Device",
 //       ),
 //   },
-//   USBDevice {
+//   UsbDevice {
 //       id: "USB\\VID_046D&PID_C52B&MI_00\\6&12D311A2&0&0000",
 //       vendor_id: 1133,
 //       product_id: 50475,
@@ -40,7 +41,9 @@ println!("{:#?}", devices);
 //     etc...
 // ]
 ```
+
 You can also subscribe to events using the `Observer`:
+
 ```rust
 use usb_enumeration::{Observer, Event};
 

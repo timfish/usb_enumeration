@@ -4,7 +4,7 @@ use io_kit_sys::{types::*, usb::lib::*, *};
 use mach::kern_return::*;
 use std::{error::Error, mem::MaybeUninit};
 
-pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<USBDevice> {
+pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> {
     let mut output = Vec::new();
 
     unsafe {
@@ -45,7 +45,7 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<USBDevice> 
 
                 if let Some(vid) = vid {
                     if vid != vendor_id {
-                        continue;
+                        return Ok(());
                     }
                 }
 
@@ -59,7 +59,7 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<USBDevice> 
 
                 if let Some(pid) = pid {
                     if pid != product_id {
-                        continue;
+                        return Ok(());
                     }
                 }
 
@@ -77,7 +77,7 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<USBDevice> 
                     .and_then(|value_ref| value_ref.downcast::<CFString>())
                     .map(|s| s.to_string());
 
-                output.push(USBDevice {
+                output.push(UsbDevice {
                     id: id.to_string(),
                     vendor_id,
                     product_id,

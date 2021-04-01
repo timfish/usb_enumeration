@@ -2,7 +2,7 @@ use std::error::Error;
 
 /// Discovered USB device
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct USBDevice {
+pub struct UsbDevice {
     /// Platform specific unique ID
     pub id: String,
     /// Vendor ID

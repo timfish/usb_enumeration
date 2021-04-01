@@ -3,7 +3,7 @@ use crate::common::*;
 use std::error::Error;
 use udev::Enumerator;
 
-pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<USBDevice> {
+pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> {
     let mut output = Vec::new();
 
     let mut enumerator = Enumerator::new().expect("could not get udev enumerator");
@@ -20,7 +20,7 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<USBDevice> 
 
             if let Some(vid) = vid {
                 if vid != vendor_id {
-                    continue;
+                    return Ok(());
                 }
             }
 
@@ -34,7 +34,7 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<USBDevice> 
 
             if let Some(pid) = pid {
                 if pid != product_id {
-                    continue;
+                    return Ok(());
                 }
             }
 
@@ -57,7 +57,7 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<USBDevice> 
                     .map(|s| s.to_string());
             }
 
-            output.push(USBDevice {
+            output.push(UsbDevice {
                 id,
                 vendor_id,
                 product_id,
