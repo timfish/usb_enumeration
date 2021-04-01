@@ -4,8 +4,8 @@
 //! [![Actions Status](https://github.com/timfish/usb-enumeration/workflows/Build/badge.svg)](https://github.com/timfish/usb-enumeration/actions)
 //!
 //! # Example
-//! ```
-//! let devices = usb_enumeration::enumerate();
+//! ```no_run
+//! let devices = usb_enumeration::enumerate(None, None);
 //!
 //! println!("{:#?}", devices);
 //!
@@ -38,12 +38,12 @@
 //! //     etc...
 //! // ]
 //! ```
-//! You can also subscribe events using the `Observer`:
+//! You can also subscribe to events using the `Observer`:
 //! ```no_run
 //! use usb_enumeration::{Observer, Event};
 //!
-//! // Set the poll interval to 2 seconds
-//! let sub = Observer::new(2)
+//! let sub = Observer::new()
+//!     .with_poll_interval(2)
 //!     .with_vendor_id(0x1234)
 //!     .with_product_id(0x5678)
 //!     .subscribe();
@@ -83,39 +83,18 @@ use crate::linux::*;
 
 /// # Enumerates connected USB devices
 ///
-/// * `vendor_id` - USB Vendor ID to filter
-/// * `product_id` - USB Product ID to filter
+/// * `vendor_id` - Optional USB Vendor ID to filter
+/// * `product_id` - Optional USB Product ID to filter
 ///
+/// ```no_run
+/// let devices = usb_enumeration::enumerate(None, None);
 /// ```
-/// let devices = usb_enumeration::enumerate();
+/// You can also optionally filter by vendor or product ID:
+/// ```no_run
+/// let devices = usb_enumeration::enumerate(Some(0x1234), None);
 /// ```
-/// There are also some handy filters:
-/// ```
-/// use usb_enumeration::Filters;
-///
-/// let devices = usb_enumeration::enumerate().with_vendor_id(0x1234);
-/// ```
-pub fn enumerate() -> Vec<USBDevice> {
-    enumerate_platform()
-}
-
-pub trait Filters {
-    fn with_vendor_id(self, vendor_id: u16) -> Vec<USBDevice>;
-    fn with_product_id(self, product_id: u16) -> Vec<USBDevice>;
-}
-
-impl Filters for Vec<USBDevice> {
-    fn with_vendor_id(self, vendor_id: u16) -> Vec<USBDevice> {
-        self.into_iter()
-            .filter(|d| d.vendor_id == vendor_id)
-            .collect()
-    }
-
-    fn with_product_id(self, product_id: u16) -> Vec<USBDevice> {
-        self.into_iter()
-            .filter(|d| d.product_id == product_id)
-            .collect()
-    }
+pub fn enumerate(vendor_id: Option<u16>, product_id: Option<u16>) -> Vec<USBDevice> {
+    enumerate_platform(vendor_id, product_id)
 }
 
 /// Events send from the Observer
@@ -139,19 +118,30 @@ pub struct Subscription {
 
 #[derive(Debug, Clone)]
 pub struct Observer {
-    poll_interval: u64,
+    poll_interval: u32,
     vendor_id: Option<u16>,
     product_id: Option<u16>,
 }
 
+impl Default for Observer {
+    fn default() -> Self {
+        Observer::new()
+    }
+}
+
 impl Observer {
     /// Create a new Observer with the poll interval specified in seconds
-    pub fn new(poll_interval: u64) -> Self {
+    pub fn new() -> Self {
         Observer {
-            poll_interval,
+            poll_interval: 1,
             vendor_id: None,
             product_id: None,
         }
+    }
+
+    pub fn with_poll_interval(mut self, seconds: u32) -> Self {
+        self.poll_interval = seconds;
+        self
     }
 
     /// Filter results by USB Vendor ID
@@ -166,20 +156,6 @@ impl Observer {
         self
     }
 
-    fn enumerate(&self) -> Vec<USBDevice> {
-        let mut devices = enumerate();
-
-        if let Some(vendor_id) = self.vendor_id {
-            devices = devices.with_vendor_id(vendor_id);
-        }
-
-        if let Some(product_id) = self.product_id {
-            devices = devices.with_product_id(product_id);
-        }
-
-        devices
-    }
-
     /// Start the background thread and poll for device changes
     pub fn subscribe(&self) -> Subscription {
         let (tx_event, rx_event) = unbounded();
@@ -190,7 +166,7 @@ impl Observer {
             .spawn({
                 let this = self.clone();
                 move || {
-                    let device_list = this.enumerate();
+                    let device_list = enumerate(this.vendor_id, this.product_id);
 
                     // Send initially connected devices
                     if tx_event.send(Event::Initial(device_list.clone())).is_err() {
@@ -215,7 +191,9 @@ impl Observer {
                         wait_seconds = this.poll_interval;
 
                         let next_devices: HashSet<USBDevice> =
-                            this.enumerate().into_iter().collect();
+                            enumerate(this.vendor_id, this.product_id)
+                                .into_iter()
+                                .collect();
 
                         // Send Disconnect for missing devices
                         for device in &device_list {
@@ -251,17 +229,17 @@ mod tests {
 
     #[test]
     fn test_enumerate() {
-        let devices = enumerate();
+        let devices = enumerate(None, None);
         println!("Enumerated devices: {:#?}", devices);
         assert!(!devices.is_empty());
     }
 
     #[test]
     fn test_subscribe() {
-        let subscription = Observer::new(1).subscribe();
+        let subscription = Observer::new().subscribe();
         let mut iter = subscription.rx_event.iter();
 
-        let initial = iter.next().unwrap();
+        let initial = iter.next().expect("Should get an Event");
         assert!(matches!(initial, Event::Initial(_)));
 
         println!("Connect a USB device");

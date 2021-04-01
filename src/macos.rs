@@ -4,7 +4,7 @@ use io_kit_sys::{types::*, usb::lib::*, *};
 use mach::kern_return::*;
 use std::{error::Error, mem::MaybeUninit};
 
-pub fn enumerate_platform() -> Vec<USBDevice> {
+pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<USBDevice> {
     let mut output = Vec::new();
 
     unsafe {
@@ -35,14 +35,6 @@ pub fn enumerate_platform() -> Vec<USBDevice> {
                 CFMutableDictionary::wrap_under_get_rule(props).to_immutable();
 
             let _ = || -> Result<(), Box<dyn Error>> {
-                let key = CFString::from_static_string("sessionID");
-                let id = properties
-                    .find(&key)
-                    .and_then(|value_ref| value_ref.downcast::<CFNumber>())
-                    .ok_or(ParseError)?
-                    .to_i64()
-                    .ok_or(ParseError)?;
-
                 let key = CFString::from_static_string("idVendor");
                 let vendor_id = properties
                     .find(&key)
@@ -51,6 +43,12 @@ pub fn enumerate_platform() -> Vec<USBDevice> {
                     .to_i32()
                     .ok_or(ParseError)? as u16;
 
+                if let Some(vid) = vid {
+                    if vid != vendor_id {
+                        continue;
+                    }
+                }
+
                 let key = CFString::from_static_string("idProduct");
                 let product_id = properties
                     .find(&key)
@@ -58,6 +56,20 @@ pub fn enumerate_platform() -> Vec<USBDevice> {
                     .ok_or(ParseError)?
                     .to_i32()
                     .ok_or(ParseError)? as u16;
+
+                if let Some(pid) = pid {
+                    if pid != product_id {
+                        continue;
+                    }
+                }
+
+                let key = CFString::from_static_string("sessionID");
+                let id = properties
+                    .find(&key)
+                    .and_then(|value_ref| value_ref.downcast::<CFNumber>())
+                    .ok_or(ParseError)?
+                    .to_i64()
+                    .ok_or(ParseError)?;
 
                 let key = CFString::from_static_string("USB Product Name");
                 let description = properties

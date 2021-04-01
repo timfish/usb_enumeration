@@ -3,20 +3,13 @@ use crate::common::*;
 use std::error::Error;
 use udev::Enumerator;
 
-pub fn enumerate_platform() -> Vec<USBDevice> {
+pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<USBDevice> {
     let mut output = Vec::new();
 
     let mut enumerator = Enumerator::new().expect("could not get udev enumerator");
 
     for device in enumerator.scan_devices().expect("could not scan devices") {
         let _ = || -> Result<(), Box<dyn Error>> {
-            let id = device
-                .property_value("DEVPATH")
-                .ok_or(ParseError)?
-                .to_str()
-                .ok_or(ParseError)?
-                .to_string();
-
             let vendor_id = get_pid_or_vid(
                 device
                     .property_value("ID_VENDOR_ID")
@@ -25,6 +18,12 @@ pub fn enumerate_platform() -> Vec<USBDevice> {
                     .ok_or(ParseError)?,
             )?;
 
+            if let Some(vid) = vid {
+                if vid != vendor_id {
+                    continue;
+                }
+            }
+
             let product_id = get_pid_or_vid(
                 device
                     .property_value("ID_MODEL_ID")
@@ -32,6 +31,19 @@ pub fn enumerate_platform() -> Vec<USBDevice> {
                     .to_str()
                     .ok_or(ParseError)?,
             )?;
+
+            if let Some(pid) = pid {
+                if pid != product_id {
+                    continue;
+                }
+            }
+
+            let id = device
+                .property_value("DEVPATH")
+                .ok_or(ParseError)?
+                .to_str()
+                .ok_or(ParseError)?
+                .to_string();
 
             let mut description = device
                 .property_value("ID_MODEL_FROM_DATABASE")

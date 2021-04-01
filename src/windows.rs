@@ -8,7 +8,7 @@ use std::{
 };
 use winapi::um::setupapi::*;
 
-pub fn enumerate_platform() -> Vec<USBDevice> {
+pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<USBDevice> {
     let mut output: Vec<USBDevice> = Vec::new();
 
     let usb: Vec<u16> = OsStr::new("USB\0").encode_wide().collect();
@@ -43,6 +43,18 @@ pub fn enumerate_platform() -> Vec<USBDevice> {
         } > 0
         {
             if let Ok((vendor_id, product_id)) = extract_vid_pid(buf) {
+                if let Some(vid) = vid {
+                    if vid != vendor_id {
+                        continue;
+                    }
+                }
+
+                if let Some(pid) = pid {
+                    if pid != product_id {
+                        continue;
+                    }
+                }
+
                 buf = vec![0; 1000];
 
                 if unsafe {

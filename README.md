@@ -7,7 +7,7 @@ currently connected USB devices
 
 ## Example
 ```rust
-let devices = usb_enumeration::enumerate();
+let devices = usb_enumeration::enumerate(None, None);
 
 println!("{:#?}", devices);
 
@@ -40,12 +40,12 @@ println!("{:#?}", devices);
 //     etc...
 // ]
 ```
-You can also subscribe events using the `Observer`:
+You can also subscribe to events using the `Observer`:
 ```rust
 use usb_enumeration::{Observer, Event};
 
-// Set the poll interval to 2 seconds
-let sub = Observer::new(2)
+let sub = Observer::new()
+    .with_poll_interval(2)
     .with_vendor_id(0x1234)
     .with_product_id(0x5678)
     .subscribe();
