@@ -28,6 +28,7 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> 
 
     let mut i = 0;
     while unsafe { SetupDiEnumDeviceInfo(dev_info, i, &mut dev_info_data) } > 0 {
+        i += 1;
         let mut buf: Vec<u8> = vec![0; 1000];
 
         if unsafe {
@@ -94,8 +95,6 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> 
                 }
             }
         }
-
-        i += 1;
     }
 
     unsafe { SetupDiDestroyDeviceInfoList(dev_info) };
