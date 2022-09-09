@@ -90,6 +90,7 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> 
                             vendor_id,
                             product_id,
                             description: Some(description),
+                            serial_number: None,
                         });
                     }
                 }
