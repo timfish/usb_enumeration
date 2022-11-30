@@ -77,11 +77,18 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> 
                     .and_then(|value_ref| value_ref.downcast::<CFString>())
                     .map(|s| s.to_string());
 
+                let key = CFString::from_static_string("USB Serial Number");
+                let serial_number = properties
+                    .find(&key)
+                    .and_then(|value_ref| value_ref.downcast::<CFString>())
+                    .map(|s| s.to_string());
+
                 output.push(UsbDevice {
                     id: id.to_string(),
                     vendor_id,
                     product_id,
                     description,
+                    serial_number,
                 });
 
                 Ok(())

@@ -84,12 +84,14 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> 
                         )
                     } > 0
                     {
-                        let id = string_from_buf_u16(buf);
+                        let id = string_from_buf_u16(buf.clone());
+                        let serial_number = extract_serial_number(buf);
                         output.push(UsbDevice {
                             id,
                             vendor_id,
                             product_id,
                             description: Some(description),
+                            serial_number,
                         });
                     }
                 }
@@ -112,6 +114,12 @@ fn extract_vid_pid(buf: Vec<u8>) -> Result<(u16, u16), Box<dyn Error + Send + Sy
         u16::from_str_radix(&id[vid + 4..vid + 8], 16)?,
         u16::from_str_radix(&id[pid + 4..pid + 8], 16)?,
     ))
+}
+
+fn extract_serial_number(buf: Vec<u16>) -> Option<String> {
+    let id = string_from_buf_u16(buf);
+
+    id.split("\\").last().map(|s| s.to_owned())
 }
 
 fn string_from_buf_u16(buf: Vec<u16>) -> String {
