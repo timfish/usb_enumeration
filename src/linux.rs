@@ -59,17 +59,15 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> 
 
             let serial_number = device
                 .property_value("ID_SERIAL_SHORT")
-                .ok_or(ParseError)?
-                .to_str()
-                .ok_or(ParseError)?
-                .to_string();
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_string());
 
             output.push(UsbDevice {
                 id,
                 vendor_id,
                 product_id,
                 description,
-                serial_number: Some(serial_number),
+                serial_number,
             });
 
             Ok(())
