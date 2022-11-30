@@ -26,10 +26,16 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> 
         #[allow(clippy::unit_cmp)]
         while (device = IOIteratorNext(iter)) == () && device > 0 {
             #[allow(clippy::uninit_assumed_init)]
-            let mut props: CFMutableDictionaryRef = MaybeUninit::uninit().assume_init();
+            let mut props = MaybeUninit::<CFMutableDictionaryRef>::uninit();
 
-            let _result =
-                IORegistryEntryCreateCFProperties(device, &mut props, kCFAllocatorDefault, 0);
+            let _result = IORegistryEntryCreateCFProperties(
+                device,
+                props.as_mut_ptr(),
+                kCFAllocatorDefault,
+                0,
+            );
+
+            let props = props.assume_init();
 
             let properties: CFDictionary<CFString, CFType> =
                 CFMutableDictionary::wrap_under_get_rule(props).to_immutable();

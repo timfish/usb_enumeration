@@ -113,7 +113,7 @@ pub struct Subscription {
     pub rx_event: Receiver<Event>,
     // When this gets dropped, the channel will become disconnected and the
     // background thread will close
-    tx_close: Sender<()>,
+    _tx_close: Sender<()>,
 }
 
 #[derive(Debug, Clone)]
@@ -197,7 +197,7 @@ impl Observer {
 
                         // Send Disconnect for missing devices
                         for device in &device_list {
-                            if !next_devices.contains(&device)
+                            if !next_devices.contains(device)
                                 && tx_event.send(Event::Disconnect(device.clone())).is_err()
                             {
                                 return;
@@ -206,7 +206,7 @@ impl Observer {
 
                         // Send Connect for new devices
                         for device in &next_devices {
-                            if !device_list.contains(&device)
+                            if !device_list.contains(device)
                                 && tx_event.send(Event::Connect(device.clone())).is_err()
                             {
                                 return;
@@ -219,7 +219,10 @@ impl Observer {
             })
             .expect("Could not spawn background thread");
 
-        Subscription { rx_event, tx_close }
+        Subscription {
+            rx_event,
+            _tx_close: tx_close,
+        }
     }
 }
 
