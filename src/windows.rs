@@ -1,33 +1,33 @@
 use crate::common::{ParseError, UsbDevice};
 use std::{
     error::Error,
-    ffi::OsStr,
-    mem::size_of,
-    os::windows::ffi::OsStrExt,
+    mem::{size_of, zeroed},
     ptr::{null, null_mut},
 };
-use winapi::um::setupapi::{
-    SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInfo, SetupDiGetClassDevsW,
-    SetupDiGetDeviceInstanceIdW, SetupDiGetDeviceRegistryPropertyW, DIGCF_ALLCLASSES,
-    DIGCF_PRESENT, SPDRP_DEVICEDESC, SPDRP_HARDWAREID, SP_DEVINFO_DATA,
+use windows_sys::{
+    w,
+    Win32::Devices::DeviceAndDriverInstallation::{
+        SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInfo, SetupDiGetClassDevsW,
+        SetupDiGetDeviceInstanceIdW, SetupDiGetDeviceRegistryPropertyW, DIGCF_ALLCLASSES,
+        DIGCF_PRESENT, SPDRP_DEVICEDESC, SPDRP_HARDWAREID, SP_DEVINFO_DATA,
+    },
 };
 
 pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> {
     let mut output: Vec<UsbDevice> = Vec::new();
 
-    let usb: Vec<u16> = OsStr::new("USB\0").encode_wide().collect();
-    let dev_info = unsafe {
-        SetupDiGetClassDevsW(
-            null(),
-            usb.as_ptr(),
-            null_mut(),
-            DIGCF_ALLCLASSES | DIGCF_PRESENT,
-        )
-    };
+    // let usb: Vec<u16> = OsStr::new("USB\0").encode_wide().collect();
+    let usb = w!("USB\0");
+    let dev_info =
+        unsafe { SetupDiGetClassDevsW(null(), usb, -1, DIGCF_ALLCLASSES | DIGCF_PRESENT) };
 
-    let mut dev_info_data = SP_DEVINFO_DATA {
-        cbSize: size_of::<SP_DEVINFO_DATA>() as u32,
-        ..Default::default()
+    let mut dev_info_data = unsafe {
+        SP_DEVINFO_DATA {
+            cbSize: size_of::<SP_DEVINFO_DATA>() as u32,
+            ClassGuid: zeroed(),
+            DevInst: zeroed(),
+            Reserved: zeroed(),
+        }
     };
 
     let mut i = 0;
