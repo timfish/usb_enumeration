@@ -69,7 +69,7 @@ use std::{collections::HashSet, thread, time::Duration};
 #[cfg(target_os = "windows")]
 mod windows;
 #[cfg(target_os = "windows")]
-use crate::windows::*;
+use crate::windows::enumerate_platform;
 
 #[cfg(target_os = "macos")]
 mod macos;
@@ -93,6 +93,7 @@ use crate::linux::*;
 /// ```no_run
 /// let devices = usb_enumeration::enumerate(Some(0x1234), None);
 /// ```
+#[must_use]
 pub fn enumerate(vendor_id: Option<u16>, product_id: Option<u16>) -> Vec<UsbDevice> {
     enumerate_platform(vendor_id, product_id)
 }
@@ -233,7 +234,7 @@ mod tests {
     #[test]
     fn test_enumerate() {
         let devices = enumerate(None, None);
-        println!("Enumerated devices: {:#?}", devices);
+        println!("Enumerated devices: {devices:#?}");
         assert!(!devices.is_empty());
     }
 
