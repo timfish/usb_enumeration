@@ -1,29 +1,33 @@
-use crate::common::*;
+use crate::common::{ParseError, UsbDevice};
 use std::{
     error::Error,
-    ffi::OsStr,
-    mem::size_of,
-    os::windows::ffi::OsStrExt,
+    mem::{size_of, zeroed},
     ptr::{null, null_mut},
 };
-use winapi::um::setupapi::*;
+use windows_sys::{
+    w,
+    Win32::Devices::DeviceAndDriverInstallation::{
+        SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInfo, SetupDiGetClassDevsW,
+        SetupDiGetDeviceInstanceIdW, SetupDiGetDeviceRegistryPropertyW, DIGCF_ALLCLASSES,
+        DIGCF_PRESENT, SPDRP_DEVICEDESC, SPDRP_HARDWAREID, SP_DEVINFO_DATA,
+    },
+};
 
 pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> {
     let mut output: Vec<UsbDevice> = Vec::new();
 
-    let usb: Vec<u16> = OsStr::new("USB\0").encode_wide().collect();
-    let dev_info = unsafe {
-        SetupDiGetClassDevsW(
-            null(),
-            usb.as_ptr(),
-            null_mut(),
-            DIGCF_ALLCLASSES | DIGCF_PRESENT,
-        )
-    };
+    // let usb: Vec<u16> = OsStr::new("USB\0").encode_wide().collect();
+    let usb = w!("USB\0");
+    let dev_info =
+        unsafe { SetupDiGetClassDevsW(null(), usb, -1, DIGCF_ALLCLASSES | DIGCF_PRESENT) };
 
-    let mut dev_info_data = SP_DEVINFO_DATA {
-        cbSize: size_of::<SP_DEVINFO_DATA>() as u32,
-        ..Default::default()
+    let mut dev_info_data = unsafe {
+        SP_DEVINFO_DATA {
+            cbSize: size_of::<SP_DEVINFO_DATA>() as u32,
+            ClassGuid: zeroed(),
+            DevInst: zeroed(),
+            Reserved: zeroed(),
+        }
     };
 
     let mut i = 0;
@@ -119,7 +123,7 @@ fn extract_vid_pid(buf: Vec<u8>) -> Result<(u16, u16), Box<dyn Error + Send + Sy
 fn extract_serial_number(buf: Vec<u16>) -> Option<String> {
     let id = string_from_buf_u16(buf);
 
-    id.split("\\").last().map(|s| s.to_owned())
+    id.split('\\').last().map(std::borrow::ToOwned::to_owned)
 }
 
 fn string_from_buf_u16(buf: Vec<u16>) -> String {
@@ -135,7 +139,6 @@ fn string_from_buf_u16(buf: Vec<u16>) -> String {
 fn string_from_buf_u8(buf: Vec<u8>) -> String {
     let str_vec: Vec<u16> = buf
         .chunks_exact(2)
-        .into_iter()
         .map(|a| u16::from_ne_bytes([a[0], a[1]]))
         .collect();
 

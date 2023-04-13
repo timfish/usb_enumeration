@@ -1,6 +1,6 @@
 # usb_enumeration
 
-A cross platform Rust library that returns the vendor and product IDs of
+A cross-platform Rust library that returns the vendor and product IDs of
 currently connected USB devices
 
 [![Actions Status](https://github.com/timfish/usb-enumeration/workflows/Build/badge.svg)](https://github.com/timfish/usb-enumeration/actions)
