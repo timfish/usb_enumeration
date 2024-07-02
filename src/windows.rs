@@ -9,13 +9,12 @@ use windows_sys::{
     Win32::Devices::DeviceAndDriverInstallation::{
         SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInfo, SetupDiGetClassDevsW,
         SetupDiGetDeviceInstanceIdW, SetupDiGetDeviceRegistryPropertyW, DIGCF_ALLCLASSES,
-        DIGCF_PRESENT, SPDRP_DEVICEDESC, SPDRP_HARDWAREID, SP_DEVINFO_DATA,
+        DIGCF_PRESENT, SPDRP_CLASS, SPDRP_DEVICEDESC, SPDRP_HARDWAREID, SP_DEVINFO_DATA,
     },
 };
 
 pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> {
     let mut output: Vec<UsbDevice> = Vec::new();
-
     // let usb: Vec<u16> = OsStr::new("USB\0").encode_wide().collect();
     let usb = w!("USB\0");
     let dev_info =
@@ -62,6 +61,24 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> 
 
                 buf = vec![0; 1000];
 
+                let mut class = None;
+                if unsafe {
+                    SetupDiGetDeviceRegistryPropertyW(
+                        dev_info,
+                        &mut dev_info_data,
+                        SPDRP_CLASS,
+                        null_mut(),
+                        buf.as_mut_ptr(),
+                        buf.len() as u32,
+                        null_mut(),
+                    )
+                } > 0
+                {
+                    class = Some(string_from_buf_u8(buf));
+                }
+
+                buf = vec![0; 1000];
+
                 if unsafe {
                     SetupDiGetDeviceRegistryPropertyW(
                         dev_info,
@@ -96,6 +113,7 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> 
                             product_id,
                             description: Some(description),
                             serial_number,
+                            class,
                         });
                     }
                 }
