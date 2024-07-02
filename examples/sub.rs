@@ -1,9 +1,7 @@
 use usb_enumeration::{Event, Observer};
 
 fn main() {
-    let sub = Observer::new()
-        .with_poll_interval(2)
-        .subscribe();
+    let sub = Observer::new().with_poll_interval(2).subscribe();
 
     // when sub is dropped, the background thread will close
     for event in sub.rx_event.iter() {
