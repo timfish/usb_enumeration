@@ -13,6 +13,8 @@ pub struct UsbDevice {
     pub description: Option<String>,
     /// Optional serial number
     pub serial_number: Option<String>,
+    /// Class of device.
+    pub class: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug)]
