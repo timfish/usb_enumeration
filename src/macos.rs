@@ -39,6 +39,7 @@ pub fn enumerate_platform(vid: Option<u16>, pid: Option<u16>) -> Vec<UsbDevice> 
 
             let properties: CFDictionary<CFString, CFType> =
                 CFMutableDictionary::wrap_under_get_rule(props).to_immutable();
+            CFRelease(props.as_void_ptr());
 
             let _ = || -> Result<(), Box<dyn Error>> {
                 let key = CFString::from_static_string("idVendor");
